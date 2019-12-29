@@ -1,0 +1,174 @@
+---
+title: "Linear Regression"
+author: "Sean F. Larsen"
+date: "December 28, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Linear Regression Exercise
+
+This project has been adapted from from Harvard University's statistical software workshop. Feel free to check out the link for more info and solutions.
+<http://tutorials.iq.harvard.edu/R/Rstatistics/Rstatistics.html>
+
+```{r echo=FALSE}
+
+```
+
+## Setting the Working Direcoty
+
+I keep all of my R projects in an R folder.  This code sets the Working directory to the correct folder.
+Then the code will check the working dirctory to ensure it is the right one.
+The code will also list all of the files in the directory.
+
+```{r echo=FALSE}
+getwd()
+list.files()
+```
+## Data Sets
+I will begin with the States data file.  I will retrieve the data that is in an rds format.
+The next code will turn the data into a date frame and get labels.
+The last code will look at the last few variable labels in the data frame.
+
+
+```{r echo=FALSE}
+states.data <- readRDS("states.rds")
+states.info <- data.frame(attributes(states.data)[c("names", "var.labels")])
+tail(states.info, 8)
+```
+## Examine the Data Before Fitting Models
+
+Before fitting a model I will need to look at the data and see what data cleaning will need to take place.
+I will start by examining the data to check for problems.
+
+The first code will show a summary of expense and csat columns for all rows.
+The second code is to look for a correlation between expense and csat.
+
+```{r echo=FALSE}
+sts.ex.sat <- subset(states.data, select = c("expense", "csat"))
+summary(sts.ex.sat)
+cor(sts.ex.sat)
+```
+## Plotting the Data Before Fitting the Model
+
+The first thing I will do is to Plot the data to look for multivariate outliers, non-linear relationships, etc.
+using a simple scatter plot.
+
+```{r echo=FALSE}
+plot(sts.ex.sat)
+```
+## Fitting the Regression Analysis
+
+Linear regression models can be fit with the `lm()' function
+For example, we can use `lm' to predict SAT scores based on
+per-pupal expenditures. Then the results will be summarized and printed.
+
+```{r echo=FALSE}
+sat.mod <- lm(csat ~ expense, data=states.data)
+summary(sat.mod)
+```
+
+## Why is the association between expense and SAT scores negative?
+Many people find it surprising that the per-capita expenditure on
+students is negatively related to SAT scores. The beauty of multiple
+regression is that we can try to pull these apart.  
+What would the association between expense and SAT scores be if there were no
+difference among the states in the percentage of students taking the SAT?
+
+```{r echo=FALSE}
+summary(lm(csat ~ expense + percent, data = states.data))
+```
+
+## The lm Class and Methods
+Now we are going to examine the model by class and use se function methods to get more information about the fit.
+
+```{r echo=FALSE}
+class(sat.mod)
+names(sat.mod)
+methods(class = class(sat.mod))[1:9]
+confint(sat.mod)
+```
+
+## Linear Regression Assumptions
+Ordinary least squares regression relies on several assumptions,
+including that the residuals are normally distributed and
+homoscedastic, the errors are independent and the relationships are linear.
+
+Im going to Investigate these assumptions visually by plotting the model.
+
+```{r echo=FALSE}
+par(mar = c(4, 4, 2, 2), mfrow = c(1, 2))
+plot(sat.mod, which = c(1, 2))
+```
+
+## Comparing Models
+Do congressional voting patterns predict SAT scores over and above expense?
+Im going to Fit two models and compare them and fit another model, adding house and senate as predictors.
+I will also make a comparision using the anova() function.
+Then I will plot the two models.
+
+```{r echo=FALSE}
+sat.voting.mod <-  lm(csat ~ expense + house + senate,
+                      data = na.omit(states.data))
+sat.mod <- update(sat.mod, data=na.omit(states.data))
+
+anova(sat.mod, sat.voting.mod)
+coef(summary(sat.voting.mod))
+
+par(mar = c(4, 4, 2, 2), mfrow = c(1, 2))
+plot(sat.voting.mod, which = c(1, 2))
+```
+
+It is ins=teresting to not the differences between the two models and the difference when house and senate predictors are added.
+
+## Exercise: least squares regression
+Useing the same data, I will fit a model predicting energy consumed per capita
+(energy) from the percentage of residents living in
+metropolitan areas (metro), then fit the model with population density to compare.
+
+```{r echo=FALSE}
+summary(lm(energy ~ metro + percent, data = states.data))
+
+energy.metro.mod <-  lm(energy ~ metro,
+                      data = na.omit(states.data))
+sat.mod <- update(sat.mod, data=na.omit(states.data))
+
+anova(sat.mod, energy.metro.mod)
+coef(summary(energy.metro.mod))
+
+par(mar = c(4, 4, 2, 2), mfrow = c(1, 2))
+plot(energy.metro.mod, which = c(1, 2))
+
+summary(lm(energy ~ metro + percent, data = states.data))
+
+energy.metro.dense.mod <-  lm(energy ~ metro + density,
+                      data = na.omit(states.data))
+sat.mod <- update(sat.mod, data=na.omit(states.data))
+
+anova(sat.mod, energy.metro.dense.mod)
+coef(summary(energy.metro.dense.mod))
+
+par(mar = c(4, 4, 2, 2), mfrow = c(1, 2))
+plot(energy.metro.dense.mod, which = c(1, 2))
+```
+
+These plots show three interesting outliers.
+
+## Setting factor reference groups and contrasts
+In the previous example we use the default contrasts for region. The
+default in R is treatment contrasts, with the first level as the
+reference. We can change the reference group or use another coding
+scheme using the `C' function.  Now I will print default contrasts,
+then change the reference group, and last change the coding scheme.
+
+```{r echo=FALSE}
+contrasts(states.data$region)
+coef(summary(lm(csat ~ C(region, base=4),
+                data=states.data)))
+coef(summary(lm(csat ~ C(region, contr.helmert),
+                data=states.data)))
+```
+
